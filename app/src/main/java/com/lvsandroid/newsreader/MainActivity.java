@@ -20,10 +20,12 @@ import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
 
 public class MainActivity extends AppCompatActivity {
-    String[] lastNewsIds;
+    JSONArray lastNewsIds;
     private final String lastNewsUrl = "https://hacker-news.firebaseio.com/v0/topstories.json?print=pretty";
-    private final String newsUrl = "https://hacker-news.firebaseio.com/v0/item/{newsId}.json?print=pretty";
+    private final String newsUrl = "https://hacker-news.firebaseio.com/v0/item/";
     private LastNewsIdsTask lastNewsIdsTask;
+    private JSONObject lastNews;
+    private LastNewsTask lastNewsTask;
 
 
 
@@ -34,28 +36,55 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         lastNewsIdsTask = new LastNewsIdsTask();
+        lastNewsTask = new LastNewsTask();
         try {
             lastNewsIds = lastNewsIdsTask.execute(lastNewsUrl).get();
+
+            if(lastNewsIds != null && lastNewsIds.length() > 0) {
+                String currentNewsId = "";
+                String currentNewsUrl = "";
+                for(int i = 0 ; i <= lastNewsIds.length() ; i++) {
+                    currentNewsId = lastNewsIds.getString(i);
+                    currentNewsUrl = newsUrl + currentNewsId + ".json?print=pretty";
+
+                    lastNews = lastNewsTask.execute(currentNewsUrl).get();
+                    while(lastNewsTask.getStatus() != AsyncTask.Status.FINISHED)
+                    {
+                        Log.i("XX","waiting");
+                    }
+                    String title = lastNews.getString("title");
+                    Log.i("XX",title);
+//                    try {
+//                        String title = lastNews.getString("title");
+//                        Log.i("XX",title);
+//                    } catch (JSONException e) {
+//                        e.printStackTrace();
+//                    }
+                }
+            }
         } catch (InterruptedException e) {
             e.printStackTrace();
         } catch (ExecutionException e) {
             e.printStackTrace();
+        } catch (JSONException e) {
+            e.printStackTrace();
         }
     }
 
-    private class LastNewsIdsTask extends AsyncTask<String, Integer, String[]> {
-        private String[] lastNewsIds;
-        @Override
-        protected String[] doInBackground(String... strings) {
-            JSONArray json;
-            String[] lastNewsIds = null;
-            try {
-                json = getLastNewsIds(lastNewsUrl);
-                lastNewsIds = json.toString().split(",");
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return lastNewsIds;
+
+    private JSONObject getNews(String url) throws IOException, JSONException {
+        InputStream is = new URL(url).openStream();
+        JSONObject json = null;
+        try {
+            BufferedReader rd = new BufferedReader(new InputStreamReader(is, Charset.forName("UTF-8")));
+            String jsonText = readAll(rd);
+            json = new JSONObject(jsonText);
+        }
+        catch(Exception e) {
+            Log.i("XX",e.getStackTrace().toString());
+        } finally {
+            is.close();
+            return json;
         }
     }
 
@@ -71,17 +100,33 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-//    private JSONObject getLastNewsDetails(String url) throws IOException, JSONException {
-//        InputStream is = new URL(url).openStream();
-//        try {
-//            BufferedReader rd = new BufferedReader(new InputStreamReader(is, Charset.forName("UTF-8")));
-//            String jsonText = readAll(rd);
-//            JSONObject json = new JSONObject(jsonText);
-//            return json;
-//        } finally {
-//            is.close();
-//        }
-//    }
+    // Asynchronous task to get  last news
+    private class LastNewsTask extends AsyncTask<String, Integer, JSONObject> {
+        @Override
+        protected JSONObject doInBackground(String... strings) {
+            JSONObject lastNews = null;
+            try {
+                lastNews = getNews(strings[0]);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return lastNews;
+        }
+    }
+
+    // Asynchronous task to get Ids of last news
+    private class LastNewsIdsTask extends AsyncTask<String, Integer, JSONArray> {
+        @Override
+        protected JSONArray doInBackground(String... strings) {
+            JSONArray lastNewsIds = null;
+            try {
+                lastNewsIds = getLastNewsIds(lastNewsUrl);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return lastNewsIds;
+        }
+    }
 
     private String readAll(Reader rd) throws IOException {
         StringBuilder sb = new StringBuilder();
