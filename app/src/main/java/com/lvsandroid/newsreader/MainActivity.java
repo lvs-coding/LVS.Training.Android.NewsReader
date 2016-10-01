@@ -39,34 +39,13 @@ public class MainActivity extends AppCompatActivity {
         lastNewsTask = new LastNewsTask();
         try {
             lastNewsIds = lastNewsIdsTask.execute(lastNewsUrl).get();
+            lastNews = lastNewsTask.execute(lastNewsIds).get();
 
             if(lastNewsIds != null && lastNewsIds.length() > 0) {
-                String currentNewsId = "";
-                String currentNewsUrl = "";
-                for(int i = 0 ; i <= lastNewsIds.length() ; i++) {
-                    currentNewsId = lastNewsIds.getString(i);
-                    currentNewsUrl = newsUrl + currentNewsId + ".json?print=pretty";
-
-                    lastNews = lastNewsTask.execute(currentNewsUrl).get();
-                    while(lastNewsTask.getStatus() != AsyncTask.Status.FINISHED)
-                    {
-                        Log.i("XX","waiting");
-                    }
-                    String title = lastNews.getString("title");
-                    Log.i("XX",title);
-//                    try {
-//                        String title = lastNews.getString("title");
-//                        Log.i("XX",title);
-//                    } catch (JSONException e) {
-//                        e.printStackTrace();
-//                    }
-                }
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
         } catch (ExecutionException e) {
-            e.printStackTrace();
-        } catch (JSONException e) {
             e.printStackTrace();
         }
     }
@@ -101,12 +80,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // Asynchronous task to get  last news
-    private class LastNewsTask extends AsyncTask<String, Integer, JSONObject> {
+    private class LastNewsTask extends AsyncTask<JSONArray, Integer, JSONObject> {
         @Override
-        protected JSONObject doInBackground(String... strings) {
+        protected JSONObject doInBackground(JSONArray... ids) {
             JSONObject lastNews = null;
             try {
-                lastNews = getNews(strings[0]);
+
+                for(int i = 0 ; i <= lastNewsIds.length() ; i++){
+                    String currentNewsId = "";
+                    currentNewsId = lastNewsIds.getString(i);
+                    lastNews = getNews(newsUrl + currentNewsId + ".json");
+                    Log.i("XX",lastNews.getString("title").toString());
+                }
+
             } catch (Exception e) {
                 e.printStackTrace();
             }
