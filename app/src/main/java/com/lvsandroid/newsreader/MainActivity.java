@@ -1,10 +1,13 @@
 package com.lvsandroid.newsreader;
 
+import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
@@ -32,7 +35,7 @@ public class MainActivity extends AppCompatActivity {
     private ArrayList<News> lastNewsList;
     static ArrayAdapter<News> myAdapter;
     SQLiteDatabase dbNews;
-
+    Intent mIntent;
 
 
 
@@ -53,10 +56,17 @@ public class MainActivity extends AppCompatActivity {
             dbNews = this.openOrCreateDatabase("newsreader",MODE_PRIVATE,null);
             dbNews.execSQL("CREATE TABLE IF NOT EXISTS news (id INTEGER PRIMARY KEY,newsId INT(10),time INT(12), title VARCHAR, url VARCHAR, UNIQUE(newsId))");
 
-            //listView.setOnItemClickListener();
-
             lastNewsIds = lastNewsIdsTask.execute(lastNewsUrl).get();
             lastNews = lastNewsTask.execute(lastNewsIds).get();
+
+            listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> adapterView, View view, int position, long l) {
+                    mIntent = new Intent(getApplicationContext(), NewsActivity.class);
+                    mIntent.putExtra("newsId",lastNewsList.get(position).mId);
+                    startActivity(mIntent);
+                }
+            });
 
 
         } catch (InterruptedException e) {
