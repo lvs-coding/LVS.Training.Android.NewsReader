@@ -1,9 +1,12 @@
 package com.lvsandroid.newsreader;
 
+import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -26,6 +29,10 @@ public class MainActivity extends AppCompatActivity {
     private LastNewsIdsTask lastNewsIdsTask;
     private JSONObject lastNews;
     private LastNewsTask lastNewsTask;
+    private ArrayList<News> lastNewsList;
+    static ArrayAdapter<News> myAdapter;
+    SQLiteDatabase dbNews;
+
 
 
 
@@ -38,11 +45,20 @@ public class MainActivity extends AppCompatActivity {
         lastNewsIdsTask = new LastNewsIdsTask();
         lastNewsTask = new LastNewsTask();
         try {
+            ListView listView;
+            listView = (ListView)findViewById(R.id.lstNews);
+            lastNewsList = new ArrayList<>();
+            myAdapter = new ArrayAdapter<>(this,android.R.layout.simple_list_item_1,lastNewsList);
+            listView.setAdapter(myAdapter);
+            dbNews = this.openOrCreateDatabase("newsreader",MODE_PRIVATE,null);
+            dbNews.execSQL("CREATE TABLE IF NOT EXISTS news (id INTEGER PRIMARY KEY,newsId INT(10),time INT(12), title VARCHAR, url VARCHAR, UNIQUE(newsId))");
+
+            //listView.setOnItemClickListener();
+
             lastNewsIds = lastNewsIdsTask.execute(lastNewsUrl).get();
             lastNews = lastNewsTask.execute(lastNewsIds).get();
 
-            if(lastNewsIds != null && lastNewsIds.length() > 0) {
-            }
+
         } catch (InterruptedException e) {
             e.printStackTrace();
         } catch (ExecutionException e) {
@@ -86,11 +102,23 @@ public class MainActivity extends AppCompatActivity {
             JSONObject lastNews = null;
             try {
 
-                for(int i = 0 ; i <= lastNewsIds.length() ; i++){
-                    String currentNewsId = "";
-                    currentNewsId = lastNewsIds.getString(i);
-                    lastNews = getNews(newsUrl + currentNewsId + ".json");
-                    Log.i("XX",lastNews.getString("title").toString());
+                if(lastNewsIds != null && lastNewsIds.length() > 0) {
+
+                    for (int i = 0; i <= lastNewsIds.length(); i++) {
+                        String currentNewsId = "";
+                        currentNewsId = lastNewsIds.getString(i);
+                        lastNews = getNews(newsUrl + currentNewsId + ".json");
+                        int newsId = Integer.valueOf(lastNews.getString("id").toString());
+                        int newsTime = Integer.valueOf(lastNews.getString("time").toString());
+                        String newsTitle = lastNews.getString("title");
+                        String newsUrl = lastNews.getString("url");
+                        lastNewsList.add(new News(newsId,newsTime,newsTitle,newsUrl));
+                        Log.i("News",newsTitle);
+                        String query = "INSERT OR IGNORE INTO news (newsId, time, title, url) VALUES (" + newsId + "," + newsTime
+                                + ",'" + newsTitle.replace("'"," ") + "','" + newsUrl + "')";
+                        Log.i("News",query);
+                        dbNews.execSQL(query);
+                    }
                 }
 
             } catch (Exception e) {
